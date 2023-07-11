@@ -21,6 +21,7 @@ describe("amm-tutorial", () => {
   let ammKey: PublicKey;
   let poolKey: PublicKey;
   let poolAuthority: PublicKey;
+  let mintLiquidityKeypair: Keypair;
 
   const mintingTokens = async () => {
     // Mint tokens
@@ -91,6 +92,7 @@ describe("amm-tutorial", () => {
       )[0];
       mintAKeypair = Keypair.generate();
       mintBKeypair = Keypair.generate();
+      mintLiquidityKeypair = Keypair.generate();
       poolKey = PublicKey.findProgramAddressSync(
         [
           id.toBuffer(),
@@ -124,6 +126,7 @@ describe("amm-tutorial", () => {
           amm: ammKey,
           pool: poolKey,
           poolAuthority,
+          mintLiquidity: mintLiquidityKeypair.publicKey,
           mintA: mintAKeypair.publicKey,
           mintB: mintBKeypair.publicKey,
           poolAccountA: getAssociatedTokenAddressSync(
@@ -137,7 +140,8 @@ describe("amm-tutorial", () => {
             true
           ),
         })
-        .rpc();
+        .signers([mintLiquidityKeypair])
+        .rpc({ skipPreflight: true });
     });
 
     it("Invalid mints", async () => {
@@ -167,6 +171,7 @@ describe("amm-tutorial", () => {
             amm: ammKey,
             pool: poolKey,
             poolAuthority,
+            mintLiquidity: mintLiquidityKeypair.publicKey,
             mintA: mintAKeypair.publicKey,
             mintB: mintBKeypair.publicKey,
             poolAccountA: getAssociatedTokenAddressSync(
@@ -180,6 +185,7 @@ describe("amm-tutorial", () => {
               true
             ),
           })
+          .signers([mintLiquidityKeypair])
           .rpc()
       );
     });
