@@ -3,6 +3,7 @@ import { Program } from "@project-serum/anchor";
 import { PublicKey, Keypair } from "@solana/web3.js";
 import { AmmTutorial } from "../target/types/amm_tutorial";
 import { expect } from "chai";
+import { expectRevert } from "./utils";
 
 describe("amm-tutorial", () => {
   // Configure the client to use the local cluster.
@@ -15,7 +16,7 @@ describe("amm-tutorial", () => {
     let fee: number;
     let admin: Keypair;
 
-    before(() => {
+    beforeEach(() => {
       id = Keypair.generate().publicKey;
       fee = 500;
       admin = Keypair.generate();
@@ -35,6 +36,20 @@ describe("amm-tutorial", () => {
       expect(ammAccount.id.toString()).to.equal(id.toString());
       expect(ammAccount.admin.toString()).to.equal(admin.publicKey.toString());
       expect(ammAccount.fee.toString()).to.equal(fee.toString());
+    });
+
+    it("Invalid fee", async () => {
+      fee = 10000;
+      const ammKey = PublicKey.findProgramAddressSync(
+        [id.toBuffer()],
+        program.programId
+      )[0];
+      await expectRevert(
+        program.methods
+          .createAmm(id, fee)
+          .accounts({ amm: ammKey, admin: admin.publicKey })
+          .rpc()
+      );
     });
   });
 });
