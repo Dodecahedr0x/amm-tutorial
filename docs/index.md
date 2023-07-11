@@ -14,8 +14,7 @@ The most famous (popularized by Uniswap V2) and one of the simple CFAMM is the C
 
 ### Math
 
-Let's suppose that the CPAMM currently has $(x_0, y_0) \in \real^{+*}$ reserves of tokens A and B respectively, and a user wants to trade in $\delta_x$ tokens A for $\delta_y$ tokens B.
-We want to find what the $\delta_y$ that the user will receive.
+Let's suppose that the CPAMM currently has $(x_0, y_0) \in \real^{+*}$ reserves of tokens A and B respectively, and a user wants to trade in $\delta_x$ tokens A for $\delta_y$ tokens B. It's important to note that the basic CPAMM can never have an empty reserve. We want to find what the $\delta_y$ that the user will receive.
 
 We know that the trade preserves the invariant $xy = K$ so we can write $x_0 y_0 = K = (x_0 + \delta_x) (y_0 - \delta_y)$
 
