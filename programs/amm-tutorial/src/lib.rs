@@ -20,4 +20,8 @@ pub mod amm_tutorial {
     pub fn create_pool(ctx: Context<CreatePool>) -> Result<()> {
         instructions::create_pool(ctx)
     }
+
+    pub fn create_deposit(ctx: Context<CreateDeposit>) -> Result<()> {
+        instructions::create_deposit(ctx)
+    }
 }

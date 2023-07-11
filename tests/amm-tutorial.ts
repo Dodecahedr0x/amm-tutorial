@@ -22,6 +22,7 @@ describe("amm-tutorial", () => {
   let poolKey: PublicKey;
   let poolAuthority: PublicKey;
   let mintLiquidityKeypair: Keypair;
+  let depositKey: PublicKey;
 
   const mintingTokens = async () => {
     // Mint tokens
@@ -188,6 +189,108 @@ describe("amm-tutorial", () => {
           .signers([mintLiquidityKeypair])
           .rpc()
       );
+    });
+
+    describe("Create an AMM deposit account", () => {
+      beforeEach(async () => {
+        id = Keypair.generate().publicKey;
+        fee = 500;
+        admin = Keypair.generate();
+        ammKey = PublicKey.findProgramAddressSync(
+          [id.toBuffer()],
+          program.programId
+        )[0];
+        mintAKeypair = Keypair.generate();
+        mintBKeypair = Keypair.generate();
+        mintLiquidityKeypair = Keypair.generate();
+        poolKey = PublicKey.findProgramAddressSync(
+          [
+            id.toBuffer(),
+            mintAKeypair.publicKey.toBuffer(),
+            mintBKeypair.publicKey.toBuffer(),
+          ],
+          program.programId
+        )[0];
+        poolAuthority = PublicKey.findProgramAddressSync(
+          [
+            id.toBuffer(),
+            mintAKeypair.publicKey.toBuffer(),
+            mintBKeypair.publicKey.toBuffer(),
+            Buffer.from("authority"),
+          ],
+          program.programId
+        )[0];
+        depositKey = PublicKey.findProgramAddressSync(
+          [poolKey.toBuffer(), admin.publicKey.toBuffer()],
+          program.programId
+        )[0];
+
+        await program.methods
+          .createAmm(id, fee)
+          .accounts({ amm: ammKey, admin: admin.publicKey })
+          .rpc();
+
+        await mintingTokens();
+
+        await program.methods
+          .createPool()
+          .accounts({
+            amm: ammKey,
+            pool: poolKey,
+            poolAuthority,
+            mintLiquidity: mintLiquidityKeypair.publicKey,
+            mintA: mintAKeypair.publicKey,
+            mintB: mintBKeypair.publicKey,
+            poolAccountA: getAssociatedTokenAddressSync(
+              mintAKeypair.publicKey,
+              poolAuthority,
+              true
+            ),
+            poolAccountB: getAssociatedTokenAddressSync(
+              mintBKeypair.publicKey,
+              poolAuthority,
+              true
+            ),
+          })
+          .signers([mintLiquidityKeypair])
+          .rpc();
+      });
+
+      it("Creation", async () => {
+        await program.methods
+          .createDeposit()
+          .accounts({
+            amm: ammKey,
+            pool: poolKey,
+            deposit: depositKey,
+            depositor: admin.publicKey,
+          })
+          .rpc();
+      });
+
+      it("Can't create twice", async () => {
+        await program.methods
+          .createDeposit()
+          .accounts({
+            amm: ammKey,
+            pool: poolKey,
+            deposit: depositKey,
+            depositor: admin.publicKey,
+          })
+          .rpc();
+
+        await expectRevert(
+          program.methods
+            .createDeposit()
+            .accounts({
+              amm: ammKey,
+              pool: poolKey,
+              deposit: depositKey,
+              depositor: admin.publicKey,
+            })
+            .rpc()
+        );
+      });
     });
   });
 });
