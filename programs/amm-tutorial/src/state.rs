@@ -16,3 +16,23 @@ pub struct Amm {
 impl Amm {
     pub const LEN: usize = 8 + 32 + 32 + 2;
 }
+
+#[account]
+#[derive(Default)]
+pub struct Pool {
+    /// Primary key of the AMM
+    pub amm_id: Pubkey,
+
+    /// Mint of token A
+    pub mint_a: Pubkey,
+
+    /// Mint of token B
+    pub mint_b: Pubkey,
+
+    /// Amount of liquidity in that pool
+    pub liquidity: u64,
+}
+
+impl Pool {
+    pub const LEN: usize = 8 + 32 + 32 + 32 + 8;
+}

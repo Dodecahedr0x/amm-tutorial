@@ -4,4 +4,7 @@ use anchor_lang::prelude::*;
 pub enum TutorialError {
     #[msg("Invalid fee value")]
     InvalidFee,
+
+    #[msg("Invalid mint for the pool")]
+    InvalidMint,
 }
