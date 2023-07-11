@@ -14,7 +14,7 @@ The most famous (popularized by Uniswap V2) and one of the simple CFAMM is the C
 
 ### Math
 
-Let's suppose that the CPAMM currently has $(x_0, y_0)$ reserves of tokens A and B respectively, and a user wants to trade in $\delta_x$ tokens A for $\delta_y$ tokens B.
+Let's suppose that the CPAMM currently has $(x_0, y_0) \in \real^{+*}$ reserves of tokens A and B respectively, and a user wants to trade in $\delta_x$ tokens A for $\delta_y$ tokens B.
 We want to find what the $\delta_y$ that the user will receive.
 
 We know that the trade preserves the invariant $xy = K$ so we can write $x_0 y_0 = K = (x_0 + \delta_x) (y_0 - \delta_y)$
@@ -31,7 +31,17 @@ x_0 y_0 - x_0 \delta_y + \delta_x y_0 - \delta_x \delta_y = x_0 y_0
 \delta_y = \frac{\delta_x y_0}{\delta_x + x_0}
 $$
 
-So we see that we can compute the amount of tokens to receive only using the initial reserves and the input amount.
+So we see that we can compute the amount of tokens to receive only using the initial reserves and the input amount. Inversely, we can compute $\delta_x$ given $\delta_y$ ("How much SOL do I need to sell to get 3USDC?"):
+
+$$
+x_0 y_0 - x_0 \delta_y + \delta_x y_0 - \delta_x \delta_y = x_0 y_0
+\\
+\delta_x y_0 - \delta_x \delta_y = x_0 \delta_y
+\\
+\delta_x (y_0 - \delta_y) = x_0 \delta_y
+\\
+\delta_x = \frac{x_0 \delta_y}{y_0 - \delta_y}
+$$
 
 Users can also deposit liquidity. This should not affect the current price of liquidity, and therefore should preserve the proportion of asset A and B.
 
