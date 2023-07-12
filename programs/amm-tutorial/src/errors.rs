@@ -10,4 +10,7 @@ pub enum TutorialError {
 
     #[msg("Depositing too little liquidity")]
     DepositTooSmall,
+
+    #[msg("Output is below the minimum expected")]
+    OutputTooSmall,
 }

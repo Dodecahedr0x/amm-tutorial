@@ -32,4 +32,13 @@ pub mod amm_tutorial {
     ) -> Result<()> {
         instructions::deposit_liquidity(ctx, amount_a, amount_b)
     }
+
+    pub fn swap_exact_tokens_for_tokens(
+        ctx: Context<SwapExactTokensForTokens>,
+        swap_a: bool,
+        input_amount: u64,
+        min_output_amount: u64,
+    ) -> Result<()> {
+        instructions::swap_exact_tokens_for_tokens(ctx, swap_a, input_amount, min_output_amount)
+    }
 }

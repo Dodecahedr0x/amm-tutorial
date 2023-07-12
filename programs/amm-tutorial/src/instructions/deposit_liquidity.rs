@@ -149,6 +149,7 @@ pub struct DepositLiquidity<'info> {
         bump,
         has_one = mint_a,
         has_one = mint_b,
+        has_one = mint_liquidity,
     )]
     pub pool: Account<'info, Pool>,
 
@@ -177,11 +178,7 @@ pub struct DepositLiquidity<'info> {
     /// The account paying for all rents
     pub depositor: Signer<'info>,
 
-    #[account(
-        mut,
-        mint::decimals = 6,
-        mint::authority = pool_authority,
-    )]
+    #[account(mut)]
     pub mint_liquidity: Box<Account<'info, Mint>>,
 
     pub mint_a: Box<Account<'info, Mint>>,

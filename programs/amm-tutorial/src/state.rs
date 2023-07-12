@@ -29,12 +29,15 @@ pub struct Pool {
     /// Mint of token B
     pub mint_b: Pubkey,
 
+    /// Mint of the liquidity token
+    pub mint_liquidity: Pubkey,
+
     /// Amount of liquidity in that pool
     pub liquidity: u64,
 }
 
 impl Pool {
-    pub const LEN: usize = 8 + 32 + 32 + 32 + 8;
+    pub const LEN: usize = 8 + 32 + 32 + 32 + 32 + 8;
 }
 
 #[account]

@@ -15,6 +15,7 @@ pub fn create_pool(ctx: Context<CreatePool>) -> Result<()> {
     pool.amm_id = ctx.accounts.amm.id;
     pool.mint_a = ctx.accounts.mint_a.key();
     pool.mint_b = ctx.accounts.mint_b.key();
+    pool.mint_liquidity = ctx.accounts.mint_liquidity.key();
 
     Ok(())
 }
