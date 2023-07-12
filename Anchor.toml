@@ -2,7 +2,7 @@
 seeds = false
 skip-lint = false
 [programs.localnet]
-amm_tutorial = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
+amm_tutorial = "CUPMV4NGFSBQcjbPfZZJodNLkzfBUyjobW6Fg8E4fF7s"
 
 [registry]
 url = "https://api.apr.dev"

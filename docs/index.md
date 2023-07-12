@@ -43,6 +43,19 @@ x_0 y_0 - x_0 \delta_y + \delta_x y_0 - \delta_x \delta_y = x_0 y_0
 $$
 
 Users can also deposit liquidity. This should not affect the current price of liquidity, and therefore should preserve the proportion of asset A and B.
+Given the current reserve $(x, y)$ and the reserves user wants to add $(x_u, y_u)$, we want to find $(x_f, y_f)$ such that $x_f \leq x_u, y_f \leq y_u$:
+
+$$
+\frac{x}{y} = \frac{x_f}{y_f}
+\\
+\
+\\
+\text{if } {x > y}, x_f = \frac{y_u x}{y}, y_f = y_u
+\\
+\
+\\
+\text{else } {x < y}, x_f = x_u, y_f = \frac{x_u y}{x}
+$$
 
 ## Implementation
 

@@ -7,7 +7,7 @@ mod state;
 
 pub use instructions::*;
 
-declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
+declare_id!("CUPMV4NGFSBQcjbPfZZJodNLkzfBUyjobW6Fg8E4fF7s");
 
 #[program]
 pub mod amm_tutorial {
@@ -23,5 +23,13 @@ pub mod amm_tutorial {
 
     pub fn create_deposit(ctx: Context<CreateDeposit>) -> Result<()> {
         instructions::create_deposit(ctx)
+    }
+
+    pub fn deposit_liquidity(
+        ctx: Context<DepositLiquidity>,
+        amount_a: u64,
+        amount_b: u64,
+    ) -> Result<()> {
+        instructions::deposit_liquidity(ctx, amount_a, amount_b)
     }
 }
