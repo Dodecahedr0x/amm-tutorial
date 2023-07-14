@@ -40,7 +40,7 @@ pub struct CreatePool<'info> {
             mint_b.key().as_ref(),
         ],
         bump,
-        constraint = mint_a.key() != mint_b.key() @ TutorialError::InvalidMint,
+        constraint = mint_a.key() < mint_b.key() @ TutorialError::InvalidMint
     )]
     pub pool: Account<'info, Pool>,
 
