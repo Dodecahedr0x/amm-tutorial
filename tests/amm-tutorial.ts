@@ -26,6 +26,7 @@ describe("amm-tutorial", () => {
   let mintBKeypair: Keypair;
   const defaultSupply = new BN(100 * 10 ** 6);
   let ammKey: PublicKey;
+  const MIN_LIQUIDITY = new BN(100);
   let poolKey: PublicKey;
   let poolAuthority: PublicKey;
   let mintLiquidityKeypair: Keypair;
@@ -105,8 +106,17 @@ describe("amm-tutorial", () => {
       [id.toBuffer()],
       program.programId
     )[0];
+
     mintAKeypair = Keypair.generate();
     mintBKeypair = Keypair.generate();
+    while (
+      new BN(mintBKeypair.publicKey.toBytes()).lt(
+        new BN(mintAKeypair.publicKey.toBytes())
+      )
+    ) {
+      mintBKeypair = Keypair.generate();
+    }
+
     mintLiquidityKeypair = Keypair.generate();
     poolKey = PublicKey.findProgramAddressSync(
       [
@@ -371,6 +381,164 @@ describe("amm-tutorial", () => {
           amm: ammKey,
           pool: poolKey,
           poolAuthority,
+          depositor: admin.publicKey,
+          mintLiquidity: mintLiquidityKeypair.publicKey,
+          mintA: mintAKeypair.publicKey,
+          mintB: mintBKeypair.publicKey,
+          poolAccountA: getAssociatedTokenAddressSync(
+            mintAKeypair.publicKey,
+            poolAuthority,
+            true
+          ),
+          poolAccountB: getAssociatedTokenAddressSync(
+            mintBKeypair.publicKey,
+            poolAuthority,
+            true
+          ),
+          depositorAccountLiquidity: getAssociatedTokenAddressSync(
+            mintLiquidityKeypair.publicKey,
+            admin.publicKey,
+            true
+          ),
+          depositorAccountA: getAssociatedTokenAddressSync(
+            mintAKeypair.publicKey,
+            admin.publicKey,
+            true
+          ),
+          depositorAccountB: getAssociatedTokenAddressSync(
+            mintBKeypair.publicKey,
+            admin.publicKey,
+            true
+          ),
+        })
+        .signers([admin])
+        .rpc({ skipPreflight: true });
+
+      const depositTokenAccountLiquditiy =
+        await connection.getTokenAccountBalance(
+          getAssociatedTokenAddressSync(
+            mintLiquidityKeypair.publicKey,
+            admin.publicKey,
+            true
+          )
+        );
+      expect(depositTokenAccountLiquditiy.value.amount).to.equal(
+        depositAmountA.sub(MIN_LIQUIDITY).toString()
+      );
+      const depositTokenAccountA = await connection.getTokenAccountBalance(
+        getAssociatedTokenAddressSync(
+          mintAKeypair.publicKey,
+          admin.publicKey,
+          true
+        )
+      );
+      expect(depositTokenAccountA.value.amount).to.equal(
+        defaultSupply.sub(depositAmountA).toString()
+      );
+      const depositTokenAccountB = await connection.getTokenAccountBalance(
+        getAssociatedTokenAddressSync(
+          mintBKeypair.publicKey,
+          admin.publicKey,
+          true
+        )
+      );
+      expect(depositTokenAccountB.value.amount).to.equal(
+        defaultSupply.sub(depositAmountB).toString()
+      );
+    });
+  });
+
+  describe("Withdraw liquidity", () => {
+    beforeEach(async () => {
+      setKeypairs();
+
+      await program.methods
+        .createAmm(id, fee)
+        .accounts({ amm: ammKey, admin: admin.publicKey })
+        .rpc();
+
+      await mintingTokens();
+
+      await program.methods
+        .createPool()
+        .accounts({
+          amm: ammKey,
+          pool: poolKey,
+          poolAuthority,
+          mintLiquidity: mintLiquidityKeypair.publicKey,
+          mintA: mintAKeypair.publicKey,
+          mintB: mintBKeypair.publicKey,
+          poolAccountA: getAssociatedTokenAddressSync(
+            mintAKeypair.publicKey,
+            poolAuthority,
+            true
+          ),
+          poolAccountB: getAssociatedTokenAddressSync(
+            mintBKeypair.publicKey,
+            poolAuthority,
+            true
+          ),
+        })
+        .signers([mintLiquidityKeypair])
+        .rpc();
+
+      await program.methods
+        .createDeposit()
+        .accounts({
+          amm: ammKey,
+          pool: poolKey,
+          deposit: depositKey,
+          depositor: admin.publicKey,
+        })
+        .rpc();
+
+      await program.methods
+        .depositLiquidity(depositAmountA, depositAmountB)
+        .accounts({
+          amm: ammKey,
+          pool: poolKey,
+          poolAuthority,
+          depositor: admin.publicKey,
+          mintLiquidity: mintLiquidityKeypair.publicKey,
+          mintA: mintAKeypair.publicKey,
+          mintB: mintBKeypair.publicKey,
+          poolAccountA: getAssociatedTokenAddressSync(
+            mintAKeypair.publicKey,
+            poolAuthority,
+            true
+          ),
+          poolAccountB: getAssociatedTokenAddressSync(
+            mintBKeypair.publicKey,
+            poolAuthority,
+            true
+          ),
+          depositorAccountLiquidity: getAssociatedTokenAddressSync(
+            mintLiquidityKeypair.publicKey,
+            admin.publicKey,
+            true
+          ),
+          depositorAccountA: getAssociatedTokenAddressSync(
+            mintAKeypair.publicKey,
+            admin.publicKey,
+            true
+          ),
+          depositorAccountB: getAssociatedTokenAddressSync(
+            mintBKeypair.publicKey,
+            admin.publicKey,
+            true
+          ),
+        })
+        .signers([admin])
+        .rpc({ skipPreflight: true });
+    });
+
+    it("Withdraw everything", async () => {
+      await program.methods
+        .withdrawLiquidity(depositAmountA.sub(MIN_LIQUIDITY))
+        .accounts({
+          amm: ammKey,
+          pool: poolKey,
+          poolAuthority,
           deposit: depositKey,
           depositor: admin.publicKey,
           mintLiquidity: mintLiquidityKeypair.publicKey,
@@ -405,20 +573,12 @@ describe("amm-tutorial", () => {
         .signers([admin])
         .rpc({ skipPreflight: true });
 
-      const depositAccount = await program.account.deposit.fetch(depositKey);
-      expect(depositAccount.liquidity.toString()).to.equal(
-        depositAmountA.toString()
-      );
-      const depositTokenAccountLiquditiy =
-        await connection.getTokenAccountBalance(
-          getAssociatedTokenAddressSync(
-            mintLiquidityKeypair.publicKey,
-            admin.publicKey,
-            true
-          )
-        );
-      expect(depositTokenAccountLiquditiy.value.amount).to.equal(
-        depositAmountA.toString()
+      const liquidityTokenAccount = await connection.getTokenAccountBalance(
+        getAssociatedTokenAddressSync(
+          mintLiquidityKeypair.publicKey,
+          admin.publicKey,
+          true
+        )
       );
       const depositTokenAccountA = await connection.getTokenAccountBalance(
         getAssociatedTokenAddressSync(
@@ -427,9 +587,6 @@ describe("amm-tutorial", () => {
           true
         )
       );
-      expect(depositTokenAccountA.value.amount).to.equal(
-        defaultSupply.sub(depositAmountA).toString()
-      );
       const depositTokenAccountB = await connection.getTokenAccountBalance(
         getAssociatedTokenAddressSync(
           mintBKeypair.publicKey,
@@ -437,8 +594,18 @@ describe("amm-tutorial", () => {
           true
         )
       );
-      expect(depositTokenAccountB.value.amount).to.equal(
-        defaultSupply.sub(depositAmountB).toString()
+      expect(liquidityTokenAccount.value.amount).to.equal("0");
+      expect(Number(depositTokenAccountA.value.amount)).to.be.lessThan(
+        defaultSupply.toNumber()
+      );
+      expect(Number(depositTokenAccountA.value.amount)).to.be.greaterThan(
+        defaultSupply.sub(depositAmountA).toNumber()
+      );
+      expect(Number(depositTokenAccountB.value.amount)).to.be.lessThan(
+        defaultSupply.toNumber()
+      );
+      expect(Number(depositTokenAccountB.value.amount)).to.be.greaterThan(
+        defaultSupply.sub(depositAmountB).toNumber()
       );
     });
   });
@@ -493,7 +660,6 @@ describe("amm-tutorial", () => {
           amm: ammKey,
           pool: poolKey,
           poolAuthority,
-          deposit: depositKey,
           depositor: admin.publicKey,
           mintLiquidity: mintLiquidityKeypair.publicKey,
           mintA: mintAKeypair.publicKey,

@@ -9,7 +9,7 @@ use fixed_sqrt::FixedSqrt;
 use crate::{
     constants::{AUTHORITY_SEED, MINIMUM_LIQUIDITY},
     errors::TutorialError,
-    state::{Amm, Deposit, Pool},
+    state::{Amm, Pool},
 };
 
 pub fn deposit_liquidity(
@@ -30,10 +30,14 @@ pub fn deposit_liquidity(
     };
 
     // Making sure they are provided in the same proportion as existing liquidity
-    let pool = &mut ctx.accounts.pool;
     let pool_a = &ctx.accounts.pool_account_a;
     let pool_b = &ctx.accounts.pool_account_b;
-    (amount_a, amount_b) = if pool.liquidity != 0 {
+    // Defining pool creation like this allows attackers to frontrun pool creation with bad ratios
+    let pool_creation = pool_a.amount == 0 && pool_b.amount == 0;
+    (amount_a, amount_b) = if pool_creation {
+        // Add as is if there is no liquidity
+        (amount_a, amount_b)
+    } else {
         let ratio = I64F64::from_num(pool_a.amount)
             .checked_mul(I64F64::from_num(pool_b.amount))
             .unwrap();
@@ -54,9 +58,6 @@ pub fn deposit_liquidity(
                     .to_num::<u64>(),
             )
         }
-    } else {
-        // Add as is if there is no liquidity
-        (amount_a, amount_b)
     };
 
     // Computing the amount of liquidity about to be deposited
@@ -66,19 +67,14 @@ pub fn deposit_liquidity(
         .sqrt()
         .to_num::<u64>();
 
-    pool.liquidity += liquidity;
-
-    if pool.liquidity == 0 {
-        // Lock some minimum liquidity
+    // Lock some minimum liquidity on the first deposit
+    if pool_creation {
         if liquidity < MINIMUM_LIQUIDITY {
             return err!(TutorialError::DepositTooSmall);
         }
 
         liquidity -= MINIMUM_LIQUIDITY;
     }
-
-    let deposit = &mut ctx.accounts.deposit;
-    deposit.liquidity += liquidity;
 
     // Transfer tokens to the pool
     token::transfer(
@@ -164,16 +160,6 @@ pub struct DepositLiquidity<'info> {
         bump,
     )]
     pub pool_authority: AccountInfo<'info>,
-
-    #[account(
-        mut,
-        seeds = [
-            pool.key().as_ref(),
-            depositor.key().as_ref(),
-        ],
-        bump,
-    )]
-    pub deposit: Account<'info, Deposit>,
 
     /// The account paying for all rents
     pub depositor: Signer<'info>,
