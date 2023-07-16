@@ -58,16 +58,6 @@ describe("Deposit liquidity", () => {
       })
       .signers([values.mintLiquidityKeypair])
       .rpc();
-
-    await program.methods
-      .createDeposit()
-      .accounts({
-        amm: values.ammKey,
-        pool: values.poolKey,
-        deposit: values.depositKey,
-        depositor: values.admin.publicKey,
-      })
-      .rpc();
   });
 
   it("Deposit", async () => {

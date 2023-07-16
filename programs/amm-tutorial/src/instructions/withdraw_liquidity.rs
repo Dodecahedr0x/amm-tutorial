@@ -7,7 +7,7 @@ use fixed::types::I64F64;
 
 use crate::{
     constants::{AUTHORITY_SEED, MINIMUM_LIQUIDITY},
-    state::{Amm, Deposit, Pool},
+    state::{Amm, Pool},
 };
 
 pub fn withdraw_liquidity(ctx: Context<WithdrawLiquidity>, amount: u64) -> Result<()> {
@@ -124,16 +124,6 @@ pub struct WithdrawLiquidity<'info> {
         bump,
     )]
     pub pool_authority: AccountInfo<'info>,
-
-    #[account(
-        mut,
-        seeds = [
-            pool.key().as_ref(),
-            depositor.key().as_ref(),
-        ],
-        bump,
-    )]
-    pub deposit: Account<'info, Deposit>,
 
     /// The account paying for all rents
     pub depositor: Signer<'info>,

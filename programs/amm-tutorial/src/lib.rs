@@ -21,10 +21,6 @@ pub mod amm_tutorial {
         instructions::create_pool(ctx)
     }
 
-    pub fn create_deposit(ctx: Context<CreateDeposit>) -> Result<()> {
-        instructions::create_deposit(ctx)
-    }
-
     pub fn deposit_liquidity(
         ctx: Context<DepositLiquidity>,
         amount_a: u64,

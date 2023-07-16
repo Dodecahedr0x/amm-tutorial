@@ -60,16 +60,6 @@ describe("Withdraw liquidity", () => {
       .rpc();
 
     await program.methods
-      .createDeposit()
-      .accounts({
-        amm: values.ammKey,
-        pool: values.poolKey,
-        deposit: values.depositKey,
-        depositor: values.admin.publicKey,
-      })
-      .rpc();
-
-    await program.methods
       .depositLiquidity(values.depositAmountA, values.depositAmountB)
       .accounts({
         amm: values.ammKey,
@@ -116,7 +106,6 @@ describe("Withdraw liquidity", () => {
         amm: values.ammKey,
         pool: values.poolKey,
         poolAuthority: values.poolAuthority,
-        deposit: values.depositKey,
         depositor: values.admin.publicKey,
         mintLiquidity: values.mintLiquidityKeypair.publicKey,
         mintA: values.mintAKeypair.publicKey,
