@@ -47,16 +47,8 @@ describe("Create pool", () => {
         mintLiquidity: values.mintLiquidityKeypair.publicKey,
         mintA: values.mintAKeypair.publicKey,
         mintB: values.mintBKeypair.publicKey,
-        poolAccountA: getAssociatedTokenAddressSync(
-          values.mintAKeypair.publicKey,
-          values.poolAuthority,
-          true
-        ),
-        poolAccountB: getAssociatedTokenAddressSync(
-          values.mintBKeypair.publicKey,
-          values.poolAuthority,
-          true
-        ),
+        poolAccountA: values.poolAccountA,
+        poolAccountB: values.poolAccountB,
       })
       .signers([values.mintLiquidityKeypair])
       .rpc({ skipPreflight: true });
@@ -94,16 +86,8 @@ describe("Create pool", () => {
           mintLiquidity: values.mintLiquidityKeypair.publicKey,
           mintA: values.mintAKeypair.publicKey,
           mintB: values.mintBKeypair.publicKey,
-          poolAccountA: getAssociatedTokenAddressSync(
-            values.mintAKeypair.publicKey,
-            values.poolAuthority,
-            true
-          ),
-          poolAccountB: getAssociatedTokenAddressSync(
-            values.mintBKeypair.publicKey,
-            values.poolAuthority,
-            true
-          ),
+          poolAccountA: values.poolAccountA,
+          poolAccountB: values.poolAccountB,
         })
         .signers([values.mintLiquidityKeypair])
         .rpc()

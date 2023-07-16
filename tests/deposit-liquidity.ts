@@ -45,16 +45,8 @@ describe("Deposit liquidity", () => {
         mintLiquidity: values.mintLiquidityKeypair.publicKey,
         mintA: values.mintAKeypair.publicKey,
         mintB: values.mintBKeypair.publicKey,
-        poolAccountA: getAssociatedTokenAddressSync(
-          values.mintAKeypair.publicKey,
-          values.poolAuthority,
-          true
-        ),
-        poolAccountB: getAssociatedTokenAddressSync(
-          values.mintBKeypair.publicKey,
-          values.poolAuthority,
-          true
-        ),
+        poolAccountA: values.poolAccountA,
+        poolAccountB: values.poolAccountB,
       })
       .signers([values.mintLiquidityKeypair])
       .rpc();
@@ -71,62 +63,28 @@ describe("Deposit liquidity", () => {
         mintLiquidity: values.mintLiquidityKeypair.publicKey,
         mintA: values.mintAKeypair.publicKey,
         mintB: values.mintBKeypair.publicKey,
-        poolAccountA: getAssociatedTokenAddressSync(
-          values.mintAKeypair.publicKey,
-          values.poolAuthority,
-          true
-        ),
-        poolAccountB: getAssociatedTokenAddressSync(
-          values.mintBKeypair.publicKey,
-          values.poolAuthority,
-          true
-        ),
-        depositorAccountLiquidity: getAssociatedTokenAddressSync(
-          values.mintLiquidityKeypair.publicKey,
-          values.admin.publicKey,
-          true
-        ),
-        depositorAccountA: getAssociatedTokenAddressSync(
-          values.mintAKeypair.publicKey,
-          values.admin.publicKey,
-          true
-        ),
-        depositorAccountB: getAssociatedTokenAddressSync(
-          values.mintBKeypair.publicKey,
-          values.admin.publicKey,
-          true
-        ),
+        poolAccountA: values.poolAccountA,
+        poolAccountB: values.poolAccountB,
+        depositorAccountLiquidity: values.liquidityAccount,
+        depositorAccountA: values.holderAccountA,
+        depositorAccountB: values.holderAccountB,
       })
       .signers([values.admin])
       .rpc({ skipPreflight: true });
 
     const depositTokenAccountLiquditiy =
-      await connection.getTokenAccountBalance(
-        getAssociatedTokenAddressSync(
-          values.mintLiquidityKeypair.publicKey,
-          values.admin.publicKey,
-          true
-        )
-      );
+      await connection.getTokenAccountBalance(values.liquidityAccount);
     expect(depositTokenAccountLiquditiy.value.amount).to.equal(
       values.depositAmountA.sub(values.minimumLiquidity).toString()
     );
     const depositTokenAccountA = await connection.getTokenAccountBalance(
-      getAssociatedTokenAddressSync(
-        values.mintAKeypair.publicKey,
-        values.admin.publicKey,
-        true
-      )
+      values.holderAccountA
     );
     expect(depositTokenAccountA.value.amount).to.equal(
       values.defaultSupply.sub(values.depositAmountA).toString()
     );
     const depositTokenAccountB = await connection.getTokenAccountBalance(
-      getAssociatedTokenAddressSync(
-        values.mintBKeypair.publicKey,
-        values.admin.publicKey,
-        true
-      )
+      values.holderAccountB
     );
     expect(depositTokenAccountB.value.amount).to.equal(
       values.defaultSupply.sub(values.depositAmountB).toString()

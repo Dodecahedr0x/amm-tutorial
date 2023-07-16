@@ -39,9 +39,13 @@ export interface TestValues {
   poolKey: PublicKey;
   poolAuthority: PublicKey;
   mintLiquidityKeypair: Keypair;
-  depositKey: PublicKey;
   depositAmountA: anchor.BN;
   depositAmountB: anchor.BN;
+  liquidityAccount: PublicKey;
+  poolAccountA: PublicKey;
+  poolAccountB: PublicKey;
+  holderAccountA: PublicKey;
+  holderAccountB: PublicKey;
 }
 
 type TestValuesDefaults = {
@@ -51,6 +55,7 @@ export function createValues(defaults?: TestValuesDefaults): TestValues {
   const id = defaults?.id || Keypair.generate().publicKey;
   const admin = Keypair.generate();
   const mintAKeypair = Keypair.generate();
+  const mintLiquidityKeypair = Keypair.generate();
   let mintBKeypair = Keypair.generate();
   while (
     new BN(mintBKeypair.publicKey.toBytes()).lt(
@@ -59,6 +64,15 @@ export function createValues(defaults?: TestValuesDefaults): TestValues {
   ) {
     mintBKeypair = Keypair.generate();
   }
+  const poolAuthority = PublicKey.findProgramAddressSync(
+    [
+      id.toBuffer(),
+      mintAKeypair.publicKey.toBuffer(),
+      mintBKeypair.publicKey.toBuffer(),
+      Buffer.from("authority"),
+    ],
+    anchor.workspace.AmmTutorial.programId
+  )[0];
   const poolKey = PublicKey.findProgramAddressSync(
     [
       id.toBuffer(),
@@ -77,22 +91,34 @@ export function createValues(defaults?: TestValuesDefaults): TestValues {
     )[0],
     mintAKeypair,
     mintBKeypair,
-    mintLiquidityKeypair: Keypair.generate(),
+    mintLiquidityKeypair,
     poolKey,
-    poolAuthority: PublicKey.findProgramAddressSync(
-      [
-        id.toBuffer(),
-        mintAKeypair.publicKey.toBuffer(),
-        mintBKeypair.publicKey.toBuffer(),
-        Buffer.from("authority"),
-      ],
-      anchor.workspace.AmmTutorial.programId
-    )[0],
-    depositKey: PublicKey.findProgramAddressSync(
-      [poolKey.toBuffer(), admin.publicKey.toBuffer()],
-      anchor.workspace.AmmTutorial.programId
-    )[0],
-
+    poolAuthority,
+    poolAccountA: getAssociatedTokenAddressSync(
+      mintAKeypair.publicKey,
+      poolAuthority,
+      true
+    ),
+    poolAccountB: getAssociatedTokenAddressSync(
+      mintBKeypair.publicKey,
+      poolAuthority,
+      true
+    ),
+    liquidityAccount: getAssociatedTokenAddressSync(
+      mintLiquidityKeypair.publicKey,
+      admin.publicKey,
+      true
+    ),
+    holderAccountA: getAssociatedTokenAddressSync(
+      mintAKeypair.publicKey,
+      admin.publicKey,
+      true
+    ),
+    holderAccountB: getAssociatedTokenAddressSync(
+      mintBKeypair.publicKey,
+      admin.publicKey,
+      true
+    ),
     depositAmountA: new BN(50 * 10 ** 6),
     depositAmountB: new BN(50 * 10 ** 6),
     minimumLiquidity: new BN(100),
