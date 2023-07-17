@@ -1,15 +1,8 @@
 import * as anchor from "@project-serum/anchor";
 import { Program } from "@project-serum/anchor";
-import { PublicKey, Keypair } from "@solana/web3.js";
-import {
-  createMint,
-  getAssociatedTokenAddressSync,
-  getOrCreateAssociatedTokenAccount,
-  mintTo,
-} from "@solana/spl-token";
 import { AmmTutorial } from "../target/types/amm_tutorial";
 import { expect } from "chai";
-import { TestValues, createValues, expectRevert, mintingTokens } from "./utils";
+import { TestValues, createValues, mintingTokens } from "./utils";
 import { BN } from "bn.js";
 
 describe("Swap", () => {
@@ -42,31 +35,21 @@ describe("Swap", () => {
         amm: values.ammKey,
         pool: values.poolKey,
         poolAuthority: values.poolAuthority,
-        mintLiquidity: values.mintLiquidityKeypair.publicKey,
+        mintLiquidity: values.mintLiquidity,
         mintA: values.mintAKeypair.publicKey,
         mintB: values.mintBKeypair.publicKey,
-        poolAccountA: getAssociatedTokenAddressSync(
-          values.mintAKeypair.publicKey,
-          values.poolAuthority,
-          true
-        ),
-        poolAccountB: getAssociatedTokenAddressSync(
-          values.mintBKeypair.publicKey,
-          values.poolAuthority,
-          true
-        ),
+        poolAccountA: values.poolAccountA,
+        poolAccountB: values.poolAccountB,
       })
-      .signers([values.mintLiquidityKeypair])
       .rpc();
 
     await program.methods
       .depositLiquidity(values.depositAmountA, values.depositAmountB)
       .accounts({
-        amm: values.ammKey,
         pool: values.poolKey,
         poolAuthority: values.poolAuthority,
         depositor: values.admin.publicKey,
-        mintLiquidity: values.mintLiquidityKeypair.publicKey,
+        mintLiquidity: values.mintLiquidity,
         mintA: values.mintAKeypair.publicKey,
         mintB: values.mintBKeypair.publicKey,
         poolAccountA: values.poolAccountA,

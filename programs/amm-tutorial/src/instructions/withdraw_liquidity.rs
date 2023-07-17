@@ -6,14 +6,14 @@ use anchor_spl::{
 use fixed::types::I64F64;
 
 use crate::{
-    constants::{AUTHORITY_SEED, MINIMUM_LIQUIDITY},
+    constants::{AUTHORITY_SEED, LIQUIDITY_SEED, MINIMUM_LIQUIDITY},
     state::{Amm, Pool},
 };
 
 pub fn withdraw_liquidity(ctx: Context<WithdrawLiquidity>, amount: u64) -> Result<()> {
     let authority_bump = *ctx.bumps.get("pool_authority").unwrap();
     let authority_seeds = &[
-        &ctx.accounts.amm.id.to_bytes(),
+        &ctx.accounts.pool.amm.to_bytes(),
         &ctx.accounts.mint_a.key().to_bytes(),
         &ctx.accounts.mint_b.key().to_bytes(),
         AUTHORITY_SEED.as_bytes(),
@@ -31,13 +31,6 @@ pub fn withdraw_liquidity(ctx: Context<WithdrawLiquidity>, amount: u64) -> Resul
         .unwrap()
         .floor()
         .to_num::<u64>();
-    msg!(
-        "{} {} {} {}",
-        amount,
-        ctx.accounts.mint_liquidity.supply,
-        ctx.accounts.pool_account_a.amount,
-        amount_a
-    );
     token::transfer(
         CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info(),
@@ -102,21 +95,20 @@ pub struct WithdrawLiquidity<'info> {
 
     #[account(
         seeds = [
-            amm.id.as_ref(),
+            pool.amm.as_ref(),
             pool.mint_a.key().as_ref(),
             pool.mint_b.key().as_ref(),
         ],
         bump,
         has_one = mint_a,
         has_one = mint_b,
-        has_one = mint_liquidity,
     )]
     pub pool: Account<'info, Pool>,
 
     /// CHECK: Read only authority
     #[account(
         seeds = [
-            amm.id.as_ref(),
+            pool.amm.as_ref(),
             mint_a.key().as_ref(),
             mint_b.key().as_ref(),
             AUTHORITY_SEED.as_ref(),
@@ -128,7 +120,16 @@ pub struct WithdrawLiquidity<'info> {
     /// The account paying for all rents
     pub depositor: Signer<'info>,
 
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = [
+            pool.amm.as_ref(),
+            mint_a.key().as_ref(),
+            mint_b.key().as_ref(),
+            LIQUIDITY_SEED.as_ref(),
+        ],
+        bump,
+    )]
     pub mint_liquidity: Box<Account<'info, Mint>>,
 
     #[account(mut)]

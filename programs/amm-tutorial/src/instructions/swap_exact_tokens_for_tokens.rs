@@ -62,7 +62,7 @@ pub fn swap_exact_tokens_for_tokens(
     // Transfer tokens to the pool
     let authority_bump = *ctx.bumps.get("pool_authority").unwrap();
     let authority_seeds = &[
-        &ctx.accounts.amm.id.to_bytes(),
+        &ctx.accounts.pool.amm.to_bytes(),
         &ctx.accounts.mint_a.key().to_bytes(),
         &ctx.accounts.mint_b.key().to_bytes(),
         AUTHORITY_SEED.as_bytes(),
@@ -141,11 +141,12 @@ pub struct SwapExactTokensForTokens<'info> {
 
     #[account(
         seeds = [
-            amm.id.as_ref(),
+            pool.amm.as_ref(),
             pool.mint_a.key().as_ref(),
             pool.mint_b.key().as_ref(),
         ],
         bump,
+        has_one = amm,
         has_one = mint_a,
         has_one = mint_b,
     )]
@@ -154,7 +155,7 @@ pub struct SwapExactTokensForTokens<'info> {
     /// CHECK: Read only authority
     #[account(
         seeds = [
-            amm.id.as_ref(),
+            pool.amm.as_ref(),
             mint_a.key().as_ref(),
             mint_b.key().as_ref(),
             AUTHORITY_SEED.as_ref(),

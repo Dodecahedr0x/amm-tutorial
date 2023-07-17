@@ -7,6 +7,7 @@ mod state;
 
 pub use instructions::*;
 
+// Set the correct key here
 declare_id!("CUPMV4NGFSBQcjbPfZZJodNLkzfBUyjobW6Fg8E4fF7s");
 
 #[program]

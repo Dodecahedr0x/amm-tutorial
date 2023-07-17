@@ -1,16 +1,8 @@
 import * as anchor from "@project-serum/anchor";
 import { Program } from "@project-serum/anchor";
-import { PublicKey, Keypair } from "@solana/web3.js";
-import {
-  createMint,
-  getAssociatedTokenAddressSync,
-  getOrCreateAssociatedTokenAccount,
-  mintTo,
-} from "@solana/spl-token";
 import { AmmTutorial } from "../target/types/amm_tutorial";
 import { expect } from "chai";
 import { TestValues, createValues, expectRevert } from "./utils";
-import { BN } from "bn.js";
 
 describe("Create AMM", () => {
   const provider = anchor.AnchorProvider.env();

@@ -7,9 +7,9 @@ use fixed::types::I64F64;
 use fixed_sqrt::FixedSqrt;
 
 use crate::{
-    constants::{AUTHORITY_SEED, MINIMUM_LIQUIDITY},
+    constants::{AUTHORITY_SEED, LIQUIDITY_SEED, MINIMUM_LIQUIDITY},
     errors::TutorialError,
-    state::{Amm, Pool},
+    state::Pool,
 };
 
 pub fn deposit_liquidity(
@@ -103,7 +103,7 @@ pub fn deposit_liquidity(
     // Mint the liquidity to user
     let authority_bump = *ctx.bumps.get("pool_authority").unwrap();
     let authority_seeds = &[
-        &ctx.accounts.amm.id.to_bytes(),
+        &ctx.accounts.pool.amm.to_bytes(),
         &ctx.accounts.mint_a.key().to_bytes(),
         &ctx.accounts.mint_b.key().to_bytes(),
         AUTHORITY_SEED.as_bytes(),
@@ -130,29 +130,20 @@ pub fn deposit_liquidity(
 pub struct DepositLiquidity<'info> {
     #[account(
         seeds = [
-            amm.id.as_ref()
-        ],
-        bump,
-    )]
-    pub amm: Account<'info, Amm>,
-
-    #[account(
-        seeds = [
-            amm.id.as_ref(),
+            pool.amm.as_ref(),
             pool.mint_a.key().as_ref(),
             pool.mint_b.key().as_ref(),
         ],
         bump,
         has_one = mint_a,
         has_one = mint_b,
-        has_one = mint_liquidity,
     )]
     pub pool: Account<'info, Pool>,
 
     /// CHECK: Read only authority
     #[account(
         seeds = [
-            amm.id.as_ref(),
+            pool.amm.as_ref(),
             mint_a.key().as_ref(),
             mint_b.key().as_ref(),
             AUTHORITY_SEED.as_ref(),
@@ -164,7 +155,16 @@ pub struct DepositLiquidity<'info> {
     /// The account paying for all rents
     pub depositor: Signer<'info>,
 
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = [
+            pool.amm.as_ref(),
+            mint_a.key().as_ref(),
+            mint_b.key().as_ref(),
+            LIQUIDITY_SEED.as_ref(),
+        ],
+        bump,
+    )]
     pub mint_liquidity: Box<Account<'info, Mint>>,
 
     pub mint_a: Box<Account<'info, Mint>>,

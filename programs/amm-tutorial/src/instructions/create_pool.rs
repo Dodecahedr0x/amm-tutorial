@@ -5,17 +5,16 @@ use anchor_spl::{
 };
 
 use crate::{
-    constants::AUTHORITY_SEED,
+    constants::{AUTHORITY_SEED, LIQUIDITY_SEED},
     errors::*,
     state::{Amm, Pool},
 };
 
 pub fn create_pool(ctx: Context<CreatePool>) -> Result<()> {
     let pool = &mut ctx.accounts.pool;
-    pool.amm_id = ctx.accounts.amm.id;
+    pool.amm = ctx.accounts.amm.key();
     pool.mint_a = ctx.accounts.mint_a.key();
     pool.mint_b = ctx.accounts.mint_b.key();
-    pool.mint_liquidity = ctx.accounts.mint_liquidity.key();
 
     Ok(())
 }
@@ -35,7 +34,7 @@ pub struct CreatePool<'info> {
         payer = payer,
         space = Pool::LEN,
         seeds = [
-            amm.id.as_ref(),
+            amm.key().as_ref(),
             mint_a.key().as_ref(),
             mint_b.key().as_ref(),
         ],
@@ -47,7 +46,7 @@ pub struct CreatePool<'info> {
     /// CHECK: Read only authority
     #[account(
         seeds = [
-            amm.id.as_ref(),
+            amm.key().as_ref(),
             mint_a.key().as_ref(),
             mint_b.key().as_ref(),
             AUTHORITY_SEED.as_ref(),
@@ -59,6 +58,13 @@ pub struct CreatePool<'info> {
     #[account(
         init,
         payer = payer,
+        seeds = [
+            amm.key().as_ref(),
+            mint_a.key().as_ref(),
+            mint_b.key().as_ref(),
+            LIQUIDITY_SEED.as_ref(),
+        ],
+        bump,
         mint::decimals = 6,
         mint::authority = pool_authority,
     )]
