@@ -59,6 +59,9 @@ pub fn swap_exact_tokens_for_tokens(
         return err!(TutorialError::OutputTooSmall);
     }
 
+    // Compute the invariant before the trade
+    let invariant = pool_a.amount * pool_b.amount;
+
     // Transfer tokens to the pool
     let authority_bump = *ctx.bumps.get("pool_authority").unwrap();
     let authority_seeds = &[
@@ -125,6 +128,15 @@ pub fn swap_exact_tokens_for_tokens(
         taxed_input,
         output
     );
+
+    // Verify the invariant still holds
+    // Reload accounts because of the CPIs
+    // We tolerate if the new invariant is higher because it means a rounding error for LPs
+    ctx.accounts.pool_account_a.reload()?;
+    ctx.accounts.pool_account_b.reload()?;
+    if invariant > ctx.accounts.pool_account_a.amount * ctx.accounts.pool_account_a.amount {
+        return err!(TutorialError::InvariantViolated);
+    }
 
     Ok(())
 }

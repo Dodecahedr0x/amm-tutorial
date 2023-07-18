@@ -13,4 +13,7 @@ pub enum TutorialError {
 
     #[msg("Output is below the minimum expected")]
     OutputTooSmall,
+
+    #[msg("Invariant does not hold")]
+    InvariantViolated,
 }
