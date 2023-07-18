@@ -122,7 +122,7 @@ anchor keys list
 Don't forget to copy the program's key in the Anchor.toml file and in the lib.rs at the root of the program folder.
 For now, we will focus on the program's structure in the ./programs/amm-tutorial/src folder, which looks like this:
 
-```bash
+```
 programs/amm-tutorial/src/
 ├── constants.rs
 ├── errors.rs
@@ -143,7 +143,53 @@ state.rs contains accounts definitions as well as any implementation for those a
 errors.rs contains all the different error codes so that Anchor can more explicit errors.
 Instructions are separated in a module because each file can be lengthy can pasting them together make navigation harder.
 
-1. The entrypoint
+1. **Account Definitions**
+
+We start by defining all the accounts we will use. For each account, the first attributes are the keys, in the order they will appear in the seeds, followed by used attributes.
+
+```rust
+use anchor_lang::prelude::*;
+
+#[account]
+#[derive(Default)]
+pub struct Amm {
+    /// Primary key of the AMM
+    pub id: Pubkey,
+
+    /// Account that has admin authority over the AMM
+    pub admin: Pubkey,
+
+    /// The LP fee taken on each trade, in basis points
+    pub fee: u16,
+}
+
+impl Amm {
+    pub const LEN: usize = 8 + 32 + 32 + 2;
+}
+
+#[account]
+#[derive(Default)]
+pub struct Pool {
+    /// Primary key of the AMM
+    pub amm_id: Pubkey,
+
+    /// Mint of token A
+    pub mint_a: Pubkey,
+
+    /// Mint of token B
+    pub mint_b: Pubkey,
+}
+
+impl Pool {
+    pub const LEN: usize = 8 + 32 + 32 + 32;
+}
+```
+
+Note that the Pool account only stores its keys because liquidity is accounted for using SPL tokens. I like to implement a LEN const for each account that tracks the size of the account. This especially useful for accounts that use Vecs or Strings.
+
+2. **Entrypoint (lib.rs)**
+
+Solana programs have a single entrypoint and then generally route the execution to the specific instruction code using transaction data. Anchor does this routing for us thanks to the #[program] macro.
 
 ```rust
 use anchor_lang::prelude::*;
@@ -193,44 +239,430 @@ pub mod amm_tutorial {
 }
 ```
 
-The entrypoint (lib.rs) defines all the program's instruction but the code for each instruction is in the instructions folder.
+We only do the routing to the proper instruction here, defined in the instructions folder. Notice how there is no instruction defined to close AMMs or pools. It is good practice to allow closing accounts to prevent state bloat and save users SOL, but in this case we will rarely be able to close pools because there might be liquidity left. AMMs can’t be closed until all their pools are closed as well.
 
-2. Account definitions
+3. **Create AMM**
+
+The first instruction is the creation of the AMM. It only sets the initial values for the configuration. We need to check that these values are correct when they are set so we can trust them later on.
 
 ```rust
 use anchor_lang::prelude::*;
 
-#[account]
-#[derive(Default)]
-pub struct Amm {
-    /// Primary key of the AMM
-    pub id: Pubkey,
+use crate::{errors::*, state::Amm};
 
-    /// Account that has admin authority over the AMM
-    pub admin: Pubkey,
+pub fn create_amm(ctx: Context<CreateAmm>, id: Pubkey, fee: u16) -> Result<()> {
+    let amm = &mut ctx.accounts.amm;
+    amm.id = id;
+    amm.admin = ctx.accounts.admin.key();
+    amm.fee = fee;
 
-    /// The LP fee taken on each trade, in basis points
-    pub fee: u16,
+    Ok(())
 }
 
-impl Amm {
-    pub const LEN: usize = 8 + 32 + 32 + 2;
-}
+#[derive(Accounts)]
+#[instruction(id: Pubkey, fee: u16)]
+pub struct CreateAmm<'info> {
+    /// The account storing the AMM configuration
+    #[account(
+        init,
+        payer = payer,
+        space = Amm::LEN,
+        seeds = [
+            id.as_ref()
+        ],
+        bump,
+        constraint = fee < 10000 @ TutorialError::InvalidFee,
+    )]
+    pub amm: Account<'info, Amm>,
 
-#[account]
-#[derive(Default)]
-pub struct Pool {
-    /// Primary key of the AMM
-    pub amm_id: Pubkey,
+    /// The admin of the AMM
+    /// CHECK: Read only, delegatable creation
+    pub admin: AccountInfo<'info>,
 
-    /// Mint of token A
-    pub mint_a: Pubkey,
+    /// The account paying for all rents
+    #[account(mut)]
+    pub payer: Signer<'info>,
 
-    /// Mint of token B
-    pub mint_b: Pubkey,
-}
-
-impl Pool {
-    pub const LEN: usize = 8 + 32 + 32 + 32 + 32;
+    /// Solana ecosystem accounts
+    pub system_program: Program<'info, System>,
 }
 ```
+
+The AMM is uniquely identified by it’s ID, therefore it’s the only seed we use. We check that the fee is indeed a basis point value < 100%. We use errors defined in errors.rs to have a more explicit errors, which is useful when there are several constraint clauses. We separate the payer from the admin in case we want delegated creation. This comes in handy when interacting with Realms DAO, because they can’t create accounts.
+
+Finally, we add the admin as an account instead of an instruction parameter to make sure it’s an valid account and not a random pubkey. However, we have to tell Anchor that it’s okay if we do not know this account beforehand by adding the `/// CHECK:` comment.
+
+4. **Create Pool**
+
+I will not go over the whole file as you can find it in the repo, but instead will focus on illustrating some of the principles talked about earlier.
+
+```rust
+#[derive(Accounts)]
+pub struct CreatePool<'info> {
+    #[account(
+        seeds = [
+            amm.id.as_ref()
+        ],
+        bump,
+    )]
+    pub amm: Account<'info, Amm>,
+
+    #[account(
+        init,
+        payer = payer,
+        space = Pool::LEN,
+        seeds = [
+            amm.key().as_ref(),
+            mint_a.key().as_ref(),
+            mint_b.key().as_ref(),
+        ],
+        bump,
+        constraint = mint_a.key() < mint_b.key() @ TutorialError::InvalidMint
+    )]
+    pub pool: Account<'info, Pool>,
+
+    /// CHECK: Read only authority
+    #[account(
+        seeds = [
+            amm.key().as_ref(),
+            mint_a.key().as_ref(),
+            mint_b.key().as_ref(),
+            AUTHORITY_SEED.as_ref(),
+        ],
+        bump,
+    )]
+    pub pool_authority: AccountInfo<'info>,
+
+    #[account(
+        init,
+        payer = payer,
+        seeds = [
+            amm.key().as_ref(),
+            mint_a.key().as_ref(),
+            mint_b.key().as_ref(),
+            LIQUIDITY_SEED.as_ref(),
+        ],
+        bump,
+        mint::decimals = 6,
+        mint::authority = pool_authority,
+    )]
+    pub mint_liquidity: Box<Account<'info, Mint>>,
+
+    ...
+}
+```
+
+Here you can see 3 accounts: the pool itself, its authority and the mint of the liquidity token. They are all derived from the pool so they share their seeds but are differentiated by the litteral string at the end.
+
+By enforcing the order of mint tokens (c.f. constraint on the pool account), we make sure that there cannot be 2 pools with the same tokens. The strict inequality also prevents pools having the same tokens, which would cause unexpected behaviors.
+
+Since the liquidity mint account is created using seeds, we do not need to store its pubkey in the pool account, saving 32 bytes of rent.
+
+5. **Depositing liquidity**
+
+When depositing liquidity, the user has to provide some amounts of both tokens. If there is no liquidity, then the first LP defines the initial ratio between both assets, otherwise we add assets according to the maximum the LP wants to provide and the current ratio.
+
+In DeFi, we often need to make computations using floating points but tokens have integer units. Rust has floating point computations (f64) but there are some limitations for using them. Thankfully, using Rust allows us to benefit from the myriad of libraries available. Using fixed and fixed-sqrt will handle everything we need for AMM computations.
+
+The process is as follows:
+
+1. Sanitize amounts to provide
+2. Compute the liquidity it will generate
+3. (On first deposit) Lock away some amount of liquidity to make sure the pool will always be tradable from now on
+4. Transfer tokens from the LP to the pool
+5. Mint liquidity tokens to the LP
+
+```rust
+pub fn deposit_liquidity(
+    ctx: Context<DepositLiquidity>,
+    amount_a: u64,
+    amount_b: u64,
+) -> Result<()> {
+    // Prevent depositing assets the depositor does not own
+    let mut amount_a = if amount_a > ctx.accounts.depositor_account_a.amount {
+    ctx.accounts.depositor_account_a.amount
+    } else {
+    amount_a
+    };
+    let mut amount_b = if amount_b > ctx.accounts.depositor_account_b.amount {
+    ctx.accounts.depositor_account_b.amount
+    } else {
+    amount_b
+    };
+
+    // Making sure they are provided in the same proportion as existing liquidity
+    let pool_a = &ctx.accounts.pool_account_a;
+    let pool_b = &ctx.accounts.pool_account_b;
+    // Defining pool creation like this allows attackers to frontrun pool creation with bad ratios
+    let pool_creation = pool_a.amount == 0 && pool_b.amount == 0;
+    (amount_a, amount_b) = if pool_creation {
+        // Add as is if there is no liquidity
+        (amount_a, amount_b)
+    } else {
+        let ratio = I64F64::from_num(pool_a.amount)
+            .checked_mul(I64F64::from_num(pool_b.amount))
+            .unwrap();
+        if pool_a.amount > pool_b.amount {
+            (
+                I64F64::from_num(amount_b)
+                    .checked_mul(ratio)
+                    .unwrap()
+                    .to_num::<u64>(),
+                amount_b,
+            )
+        } else {
+            (
+                amount_a,
+                I64F64::from_num(amount_a)
+                    .checked_div(ratio)
+                    .unwrap()
+                    .to_num::<u64>(),
+            )
+        }
+    };
+
+    // Computing the amount of liquidity about to be deposited
+    let mut liquidity = I64F64::from_num(amount_a)
+        .checked_mul(I64F64::from_num(amount_b))
+        .unwrap()
+        .sqrt()
+        .to_num::<u64>();
+
+    // Lock some minimum liquidity on the first deposit
+    if pool_creation {
+        if liquidity < MINIMUM_LIQUIDITY {
+            return err!(TutorialError::DepositTooSmall);
+        }
+
+        liquidity -= MINIMUM_LIQUIDITY;
+    }
+
+    // Transfer tokens to the pool
+    token::transfer(
+        CpiContext::new(
+            ctx.accounts.token_program.to_account_info(),
+            Transfer {
+                from: ctx.accounts.depositor_account_a.to_account_info(),
+                to: ctx.accounts.pool_account_a.to_account_info(),
+                authority: ctx.accounts.depositor.to_account_info(),
+            },
+        ),
+        amount_a,
+    )?;
+    token::transfer(
+        CpiContext::new(
+            ctx.accounts.token_program.to_account_info(),
+            Transfer {
+                from: ctx.accounts.depositor_account_b.to_account_info(),
+                to: ctx.accounts.pool_account_b.to_account_info(),
+                authority: ctx.accounts.depositor.to_account_info(),
+            },
+        ),
+        amount_b,
+    )?;
+
+    // Mint the liquidity to user
+    let authority_bump = *ctx.bumps.get("pool_authority").unwrap();
+    let authority_seeds = &[
+        &ctx.accounts.pool.amm.to_bytes(),
+        &ctx.accounts.mint_a.key().to_bytes(),
+        &ctx.accounts.mint_b.key().to_bytes(),
+        AUTHORITY_SEED.as_bytes(),
+        &[authority_bump],
+    ];
+    let signer_seeds = &[&authority_seeds[..]];
+    token::mint_to(
+        CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info(),
+            MintTo {
+                mint: ctx.accounts.mint_liquidity.to_account_info(),
+                to: ctx.accounts.depositor_account_liquidity.to_account_info(),
+                authority: ctx.accounts.pool_authority.to_account_info(),
+            },
+            signer_seeds,
+        ),
+        liquidity,
+    )?;
+
+    Ok(())
+
+}
+```
+
+6. **Swapping**
+
+Using the math we wrote in the previous section we can now simply implement these computations and have a guarantee the swap is done correctly. To make sure, we even check that the invariant still holds after the trade.
+
+The process is as follows:
+
+1. Sanitize inputs
+2. Take the fee defined by the AMM from the trade input
+3. Compute the ouput using the formula
+4. Transfer the input to the pool and the output to the trader
+5. Check invariant
+
+```rust
+pub fn swap_exact_tokens_for_tokens(
+    ctx: Context<SwapExactTokensForTokens>,
+    swap_a: bool,
+    input_amount: u64,
+    min_output_amount: u64,
+) -> Result<()> {
+    // Prevent depositing assets the depositor does not own
+    let input = if swap_a && input_amount > ctx.accounts.trader_account_a.amount {
+    ctx.accounts.trader_account_a.amount
+    } else if !swap_a && input_amount > ctx.accounts.trader_account_b.amount {
+    ctx.accounts.trader_account_b.amount
+    } else {
+    input_amount
+    };
+
+    // Apply trading fee, used to compute the output
+    let amm = &ctx.accounts.amm;
+    let taxed_input = input - input * amm.fee as u64 / 10000;
+
+    let pool_a = &ctx.accounts.pool_account_a;
+    let pool_b = &ctx.accounts.pool_account_b;
+    let output = if swap_a {
+        I64F64::from_num(taxed_input)
+            .checked_mul(I64F64::from_num(pool_b.amount))
+            .unwrap()
+            .checked_div(
+                I64F64::from_num(pool_a.amount)
+                    .checked_add(I64F64::from_num(taxed_input))
+                    .unwrap(),
+            )
+            .unwrap()
+    } else {
+        I64F64::from_num(taxed_input)
+            .checked_mul(I64F64::from_num(pool_a.amount))
+            .unwrap()
+            .checked_div(
+                I64F64::from_num(pool_b.amount)
+                    .checked_add(I64F64::from_num(taxed_input))
+                    .unwrap(),
+            )
+            .unwrap()
+    }
+    .to_num::<u64>();
+
+    if output < min_output_amount {
+        return err!(TutorialError::OutputTooSmall);
+    }
+
+    // Compute the invariant before the trade
+    let invariant = pool_a.amount * pool_b.amount;
+
+    // Transfer tokens to the pool
+    let authority_bump = *ctx.bumps.get("pool_authority").unwrap();
+    let authority_seeds = &[
+        &ctx.accounts.pool.amm.to_bytes(),
+        &ctx.accounts.mint_a.key().to_bytes(),
+        &ctx.accounts.mint_b.key().to_bytes(),
+        AUTHORITY_SEED.as_bytes(),
+        &[authority_bump],
+    ];
+    let signer_seeds = &[&authority_seeds[..]];
+    if swap_a {
+        token::transfer(
+            CpiContext::new(
+                ctx.accounts.token_program.to_account_info(),
+                Transfer {
+                    from: ctx.accounts.trader_account_a.to_account_info(),
+                    to: ctx.accounts.pool_account_a.to_account_info(),
+                    authority: ctx.accounts.trader.to_account_info(),
+                },
+            ),
+            input,
+        )?;
+        token::transfer(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info(),
+                Transfer {
+                    from: ctx.accounts.pool_account_b.to_account_info(),
+                    to: ctx.accounts.trader_account_b.to_account_info(),
+                    authority: ctx.accounts.pool_authority.to_account_info(),
+                },
+                signer_seeds,
+            ),
+            output,
+        )?;
+    } else {
+        token::transfer(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info(),
+                Transfer {
+                    from: ctx.accounts.pool_account_a.to_account_info(),
+                    to: ctx.accounts.trader_account_a.to_account_info(),
+                    authority: ctx.accounts.pool_authority.to_account_info(),
+                },
+                signer_seeds,
+            ),
+            input,
+        )?;
+        token::transfer(
+            CpiContext::new(
+                ctx.accounts.token_program.to_account_info(),
+                Transfer {
+                    from: ctx.accounts.trader_account_b.to_account_info(),
+                    to: ctx.accounts.pool_account_b.to_account_info(),
+                    authority: ctx.accounts.trader.to_account_info(),
+                },
+            ),
+            output,
+        )?;
+    }
+
+    msg!(
+        "Traded {} tokens ({} after fees) for {}",
+        input,
+        taxed_input,
+        output
+    );
+
+    // Verify the invariant still holds
+    // Reload accounts because of the CPIs
+    // We tolerate if the new invariant is higher because it means a rounding error for LPs
+    ctx.accounts.pool_account_a.reload()?;
+    ctx.accounts.pool_account_b.reload()?;
+    if invariant > ctx.accounts.pool_account_a.amount * ctx.accounts.pool_account_a.amount {
+        return err!(TutorialError::InvariantViolated);
+    }
+
+    Ok(())
+
+}
+```
+
+### Tests
+
+Testing is an important part of development but I still don’t feel satisfied by the why I do tests using Anchor, so bear that in mind in the following section, I would be glad to have some feedbacks.
+
+The structure I went with is the following:
+
+```
+tests/
+├── create-amm.ts
+├── create-pool.ts
+├── deposit-liquidity.ts
+├── swap.ts
+├── utils.ts
+└── withdraw-liquidity.ts
+```
+
+Again, splitting files makes it easier for me to find the case I’m looking for rather than scrolling and endless files. Test suites can quickly become big, especially if you want to be exhaustive. To make that easier, I create a function (createValues) that return all the addresses, PDA, keypairs, values, etc, that I could possibly need in the utils.ts file to avoid repeating too much code.
+
+I generally like to develop a Typescript SDK along tests, that will be used in the front end, but this is out of scope for this tutorial.
+
+Running anchor test at the root of the folder should build the program, deploy it on a test validator and then run all the test suites in tests folder.
+
+## Conclusion
+
+We have implemented a simple but functional Constant Product Automated Market Maker on Solana using Anchor. We have seen how AMMs work and I hope you got a glimpse of how bonding curves in general can be used to create and design mechanisms for your project.
+
+I first invite you to expand the current program to make it your own. Some leads of what can be done:
+
+- Adding an admin fee that transfers some token to the AMM admin. This should help finance further developments.
+- Create the swap_tokens_for_exact_tokens , the function that let’s user fix the output and the AMM computes the required input.
+- Implement more complex curves (e.g. Velodrome stableswap using the invariant x³y+y³x >= k)
+- Compose it with a staking program to create a farm
