@@ -43,7 +43,7 @@ describe("Withdraw liquidity", () => {
       .rpc();
 
     await program.methods
-      .depositLiquidity(values.depositAmountA, values.depositAmountB)
+      .depositLiquidity(values.depositAmountA, values.depositAmountA)
       .accounts({
         pool: values.poolKey,
         poolAuthority: values.poolAuthority,
@@ -101,7 +101,7 @@ describe("Withdraw liquidity", () => {
       values.defaultSupply.toNumber()
     );
     expect(Number(depositTokenAccountB.value.amount)).to.be.greaterThan(
-      values.defaultSupply.sub(values.depositAmountB).toNumber()
+      values.defaultSupply.sub(values.depositAmountA).toNumber()
     );
   });
 });

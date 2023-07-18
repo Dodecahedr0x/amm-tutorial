@@ -43,9 +43,9 @@ describe("Deposit liquidity", () => {
       .rpc();
   });
 
-  it("Deposit", async () => {
+  it("Deposit equal amounts", async () => {
     await program.methods
-      .depositLiquidity(values.depositAmountA, values.depositAmountB)
+      .depositLiquidity(values.depositAmountA, values.depositAmountA)
       .accounts({
         pool: values.poolKey,
         poolAuthority: values.poolAuthority,
@@ -77,7 +77,7 @@ describe("Deposit liquidity", () => {
       values.holderAccountB
     );
     expect(depositTokenAccountB.value.amount).to.equal(
-      values.defaultSupply.sub(values.depositAmountB).toString()
+      values.defaultSupply.sub(values.depositAmountA).toString()
     );
   });
 });

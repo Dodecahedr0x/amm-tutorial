@@ -208,8 +208,8 @@ export function createValues(defaults?: TestValuesDefaults): TestValues {
       admin.publicKey,
       true
     ),
-    depositAmountA: new BN(50 * 10 ** 6),
-    depositAmountB: new BN(50 * 10 ** 6),
+    depositAmountA: new BN(4 * 10 ** 6),
+    depositAmountB: new BN(1 * 10 ** 6),
     minimumLiquidity: new BN(100),
     defaultSupply: new BN(100 * 10 ** 6),
   };
