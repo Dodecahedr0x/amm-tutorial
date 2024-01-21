@@ -2,14 +2,14 @@
 seeds = false
 skip-lint = false
 [programs.localnet]
-amm_tutorial = "CUPMV4NGFSBQcjbPfZZJodNLkzfBUyjobW6Fg8E4fF7s"
+amm_tutorial = "4aTThYD7GtPg6cdipzdWCkDuj2KdePGLm9Goc8RyRBWn"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
 cluster = "Localnet"
-wallet = "/home/julien/.config/solana/id.json"
+wallet = "/Users/andrew/my-solana-wallet/wba-wallet.json" 
 
 [scripts]
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"

@@ -8,18 +8,19 @@ mod state;
 pub use instructions::*;
 
 // Set the correct key here
-declare_id!("CUPMV4NGFSBQcjbPfZZJodNLkzfBUyjobW6Fg8E4fF7s");
+declare_id!("4aTThYD7GtPg6cdipzdWCkDuj2KdePGLm9Goc8RyRBWn");
 
 #[program]
 pub mod amm_tutorial {
     use super::*;
 
     pub fn create_amm(ctx: Context<CreateAmm>, id: Pubkey, fee: u16) -> Result<()> {
-        instructions::create_amm(ctx, id, fee)
+        ctx.accounts.create_amm(id, fee)?;
+        Ok(())
     }
 
     pub fn create_pool(ctx: Context<CreatePool>) -> Result<()> {
-        instructions::create_pool(ctx)
+        ctx.accounts.create_pool()
     }
 
     pub fn deposit_liquidity(
@@ -27,11 +28,11 @@ pub mod amm_tutorial {
         amount_a: u64,
         amount_b: u64,
     ) -> Result<()> {
-        instructions::deposit_liquidity(ctx, amount_a, amount_b)
+        ctx.accounts.deposit_liquidity(amount_a, amount_b, &ctx.bumps)
     }
 
     pub fn withdraw_liquidity(ctx: Context<WithdrawLiquidity>, amount: u64) -> Result<()> {
-        instructions::withdraw_liquidity(ctx, amount)
+        ctx.accounts.withdraw_liquidity(amount, &ctx.bumps)
     }
 
     pub fn swap_exact_tokens_for_tokens(
@@ -40,6 +41,6 @@ pub mod amm_tutorial {
         input_amount: u64,
         min_output_amount: u64,
     ) -> Result<()> {
-        instructions::swap_exact_tokens_for_tokens(ctx, swap_a, input_amount, min_output_amount)
+        ctx.accounts.swap_exact_tokens_for_tokens(swap_a, input_amount, min_output_amount, &ctx.bumps)
     }
 }

@@ -2,15 +2,22 @@ use anchor_lang::prelude::*;
 
 use crate::{errors::*, state::Amm};
 
-pub fn create_amm(ctx: Context<CreateAmm>, id: Pubkey, fee: u16) -> Result<()> {
-    let amm = &mut ctx.accounts.amm;
-    amm.id = id;
-    amm.admin = ctx.accounts.admin.key();
-    amm.fee = fee;
 
-    Ok(())
+impl<'info> CreateAmm<'info> {
+pub fn create_amm(
+
+    &mut self, 
+    id: Pubkey, 
+    fee: u16
+) -> Result<()> {
+        let amm = &mut self.amm;
+        amm.id = id;
+        amm.admin = self.admin.key();
+        amm.fee = fee;
+
+        Ok(())
+    }
 }
-
 #[derive(Accounts)]
 #[instruction(id: Pubkey, fee: u16)]
 pub struct CreateAmm<'info> {
