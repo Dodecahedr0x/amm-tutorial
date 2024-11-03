@@ -9,85 +9,83 @@ use crate::{
     constants::{AUTHORITY_SEED, LIQUIDITY_SEED, MINIMUM_LIQUIDITY},
     state::{Amm, Pool},
 };
-impl<'info> WithdrawLiquidity<'info>  {
-    
-pub fn withdraw_liquidity(
-    &mut self, 
-    amount: u64, 
-    bumps: &WithdrawLiquidityBumps
-) -> Result<()> {
-    let authority_bump = bumps.pool_authority;
-    let authority_seeds = &[
-        &self.pool.amm.to_bytes(),
-        &self.mint_a.key().to_bytes(),
-        &self.mint_b.key().to_bytes(),
-        AUTHORITY_SEED.as_bytes(),
-        &[authority_bump],
-    ];
-    let signer_seeds = &[&authority_seeds[..]];
+impl<'info> WithdrawLiquidity<'info> {
+    pub fn withdraw_liquidity(
+        &mut self,
+        amount: u64,
+        bumps: &WithdrawLiquidityBumps,
+    ) -> Result<()> {
+        let authority_bump = bumps.pool_authority;
+        let authority_seeds = &[
+            &self.pool.amm.to_bytes(),
+            &self.mint_a.key().to_bytes(),
+            &self.mint_b.key().to_bytes(),
+            AUTHORITY_SEED.as_bytes(),
+            &[authority_bump],
+        ];
+        let signer_seeds = &[&authority_seeds[..]];
 
-    // Transfer tokens from the pool
-    let amount_a = I64F64::from_num(amount)
-        .checked_mul(I64F64::from_num(self.pool_account_a.amount))
-        .unwrap()
-        .checked_div(I64F64::from_num(
-            self.mint_liquidity.supply + MINIMUM_LIQUIDITY,
-        ))
-        .unwrap()
-        .floor()
-        .to_num::<u64>();
-    token::transfer(
-        CpiContext::new_with_signer(
-            self.token_program.to_account_info(),
-            Transfer {
-                from: self.pool_account_a.to_account_info(),
-                to: self.depositor_account_a.to_account_info(),
-                authority: self.pool_authority.to_account_info(),
-            },
-            signer_seeds,
-        ),
-        amount_a,
-    )?;
+        // Transfer tokens from the pool
+        let amount_a = I64F64::from_num(amount)
+            .checked_mul(I64F64::from_num(self.pool_account_a.amount))
+            .unwrap()
+            .checked_div(I64F64::from_num(
+                self.mint_liquidity.supply + MINIMUM_LIQUIDITY,
+            ))
+            .unwrap()
+            .floor()
+            .to_num::<u64>();
+        token::transfer(
+            CpiContext::new_with_signer(
+                self.token_program.to_account_info(),
+                Transfer {
+                    from: self.pool_account_a.to_account_info(),
+                    to: self.depositor_account_a.to_account_info(),
+                    authority: self.pool_authority.to_account_info(),
+                },
+                signer_seeds,
+            ),
+            amount_a,
+        )?;
 
-    let amount_b = I64F64::from_num(amount)
-        .checked_mul(I64F64::from_num(self.pool_account_b.amount))
-        .unwrap()
-        .checked_div(I64F64::from_num(
-            self.mint_liquidity.supply + MINIMUM_LIQUIDITY,
-        ))
-        .unwrap()
-        .floor()
-        .to_num::<u64>();
-    token::transfer(
-        CpiContext::new_with_signer(
-            self.token_program.to_account_info(),
-            Transfer {
-                from: self.pool_account_b.to_account_info(),
-                to: self.depositor_account_b.to_account_info(),
-                authority: self.pool_authority.to_account_info(),
-            },
-            signer_seeds,
-        ),
-        amount_b,
-    )?;
+        let amount_b = I64F64::from_num(amount)
+            .checked_mul(I64F64::from_num(self.pool_account_b.amount))
+            .unwrap()
+            .checked_div(I64F64::from_num(
+                self.mint_liquidity.supply + MINIMUM_LIQUIDITY,
+            ))
+            .unwrap()
+            .floor()
+            .to_num::<u64>();
+        token::transfer(
+            CpiContext::new_with_signer(
+                self.token_program.to_account_info(),
+                Transfer {
+                    from: self.pool_account_b.to_account_info(),
+                    to: self.depositor_account_b.to_account_info(),
+                    authority: self.pool_authority.to_account_info(),
+                },
+                signer_seeds,
+            ),
+            amount_b,
+        )?;
 
-    // Burn the liquidity tokens
-    // It will fail if the amount is invalid
-    token::burn(
-        CpiContext::new(
-            self.token_program.to_account_info(),
-            Burn {
-                mint: self.mint_liquidity.to_account_info(),
-                from: self.depositor_account_liquidity.to_account_info(),
-                authority: self.depositor.to_account_info(),
-            },
-        ),
-        amount,
-    )?;
+        // Burn the liquidity tokens
+        // It will fail if the amount is invalid
+        token::burn(
+            CpiContext::new(
+                self.token_program.to_account_info(),
+                Burn {
+                    mint: self.mint_liquidity.to_account_info(),
+                    from: self.depositor_account_liquidity.to_account_info(),
+                    authority: self.depositor.to_account_info(),
+                },
+            ),
+            amount,
+        )?;
 
-    Ok(())
-}
-
+        Ok(())
+    }
 }
 #[derive(Accounts)]
 pub struct WithdrawLiquidity<'info> {
@@ -97,7 +95,7 @@ pub struct WithdrawLiquidity<'info> {
         ],
         bump,
     )]
-    pub amm: Account<'info, Amm>,
+    pub amm: Box<Account<'info, Amm>>,
 
     #[account(
         seeds = [
@@ -109,7 +107,7 @@ pub struct WithdrawLiquidity<'info> {
         has_one = mint_a,
         has_one = mint_b,
     )]
-    pub pool: Account<'info, Pool>,
+    pub pool: Box<Account<'info, Pool>>,
 
     /// CHECK: Read only authority
     #[account(

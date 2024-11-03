@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
-    token::{Mint, Token, TokenAccount},
+    token::{Mint, Token},
 };
 
 use crate::{
@@ -28,7 +28,7 @@ pub struct CreatePool<'info> {
         ],
         bump,
     )]
-    pub amm: Account<'info, Amm>,
+    pub amm: Box<Account<'info, Amm>>,
 
     #[account(
         init,
@@ -42,7 +42,7 @@ pub struct CreatePool<'info> {
         bump,
         constraint = mint_a.key() < mint_b.key() @ TutorialError::InvalidMint
     )]
-    pub pool: Account<'info, Pool>,
+    pub pool: Box<Account<'info, Pool>>,
 
     /// CHECK: Read only authority
     #[account(
@@ -74,22 +74,6 @@ pub struct CreatePool<'info> {
     pub mint_a: Box<Account<'info, Mint>>,
 
     pub mint_b: Box<Account<'info, Mint>>,
-
-    #[account(
-        init,
-        payer = payer,
-        associated_token::mint = mint_a,
-        associated_token::authority = pool_authority,
-    )]
-    pub pool_account_a: Box<Account<'info, TokenAccount>>,
-
-    #[account(
-        init,
-        payer = payer,
-        associated_token::mint = mint_b,
-        associated_token::authority = pool_authority,
-    )]
-    pub pool_account_b: Box<Account<'info, TokenAccount>>,
 
     /// The account paying for all rents
     #[account(mut)]

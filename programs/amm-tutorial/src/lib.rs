@@ -8,7 +8,7 @@ mod state;
 pub use instructions::*;
 
 // Set the correct key here
-declare_id!("4aTThYD7GtPg6cdipzdWCkDuj2KdePGLm9Goc8RyRBWn");
+declare_id!("9e2DFyoPwf9GNZ9oyGBpsh5W9FoT2CwUJ5USX9qVHMF8");
 
 #[program]
 pub mod amm_tutorial {
@@ -28,7 +28,8 @@ pub mod amm_tutorial {
         amount_a: u64,
         amount_b: u64,
     ) -> Result<()> {
-        ctx.accounts.deposit_liquidity(amount_a, amount_b, &ctx.bumps)
+        ctx.accounts
+            .deposit_liquidity(amount_a, amount_b, &ctx.bumps)
     }
 
     pub fn withdraw_liquidity(ctx: Context<WithdrawLiquidity>, amount: u64) -> Result<()> {
@@ -41,6 +42,11 @@ pub mod amm_tutorial {
         input_amount: u64,
         min_output_amount: u64,
     ) -> Result<()> {
-        ctx.accounts.swap_exact_tokens_for_tokens(swap_a, input_amount, min_output_amount, &ctx.bumps)
+        ctx.accounts.swap_exact_tokens_for_tokens(
+            swap_a,
+            input_amount,
+            min_output_amount,
+            &ctx.bumps,
+        )
     }
 }
