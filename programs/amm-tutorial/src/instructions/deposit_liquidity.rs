@@ -12,26 +12,28 @@ use crate::{
     state::Pool,
 };
 
+impl<'info> DepositLiquidity<'info> { 
 pub fn deposit_liquidity(
-    ctx: Context<DepositLiquidity>,
+    &mut self,
     amount_a: u64,
     amount_b: u64,
+    bumps: &DepositLiquidityBumps
 ) -> Result<()> {
     // Prevent depositing assets the depositor does not own
-    let mut amount_a = if amount_a > ctx.accounts.depositor_account_a.amount {
-        ctx.accounts.depositor_account_a.amount
+    let mut amount_a = if amount_a > self.depositor_account_a.amount {
+        self.depositor_account_a.amount
     } else {
         amount_a
     };
-    let mut amount_b = if amount_b > ctx.accounts.depositor_account_b.amount {
-        ctx.accounts.depositor_account_b.amount
+    let mut amount_b = if amount_b > self.depositor_account_b.amount {
+        self.depositor_account_b.amount
     } else {
         amount_b
     };
 
     // Making sure they are provided in the same proportion as existing liquidity
-    let pool_a = &ctx.accounts.pool_account_a;
-    let pool_b = &ctx.accounts.pool_account_b;
+    let pool_a = &self.pool_account_a;
+    let pool_b = &self.pool_account_b;
     // Defining pool creation like this allows attackers to frontrun pool creation with bad ratios
     let pool_creation = pool_a.amount == 0 && pool_b.amount == 0;
     (amount_a, amount_b) = if pool_creation {
@@ -79,53 +81,53 @@ pub fn deposit_liquidity(
     // Transfer tokens to the pool
     token::transfer(
         CpiContext::new(
-            ctx.accounts.token_program.to_account_info(),
+            self.token_program.to_account_info(),
             Transfer {
-                from: ctx.accounts.depositor_account_a.to_account_info(),
-                to: ctx.accounts.pool_account_a.to_account_info(),
-                authority: ctx.accounts.depositor.to_account_info(),
+                from: self.depositor_account_a.to_account_info(),
+                to: self.pool_account_a.to_account_info(),
+                authority: self.depositor.to_account_info(),
             },
         ),
         amount_a,
     )?;
     token::transfer(
         CpiContext::new(
-            ctx.accounts.token_program.to_account_info(),
+            self.token_program.to_account_info(),
             Transfer {
-                from: ctx.accounts.depositor_account_b.to_account_info(),
-                to: ctx.accounts.pool_account_b.to_account_info(),
-                authority: ctx.accounts.depositor.to_account_info(),
+                from: self.depositor_account_b.to_account_info(),
+                to: self.pool_account_b.to_account_info(),
+                authority: self.depositor.to_account_info(),
             },
         ),
         amount_b,
     )?;
 
     // Mint the liquidity to user
-    let authority_bump = *ctx.bumps.get("pool_authority").unwrap();
+    let authority_bump = bumps.pool_authority;
     let authority_seeds = &[
-        &ctx.accounts.pool.amm.to_bytes(),
-        &ctx.accounts.mint_a.key().to_bytes(),
-        &ctx.accounts.mint_b.key().to_bytes(),
+        &self.pool.amm.to_bytes(),
+        &self.mint_a.key().to_bytes(),
+        &self.mint_b.key().to_bytes(),
         AUTHORITY_SEED.as_bytes(),
         &[authority_bump],
     ];
     let signer_seeds = &[&authority_seeds[..]];
     token::mint_to(
         CpiContext::new_with_signer(
-            ctx.accounts.token_program.to_account_info(),
+            self.token_program.to_account_info(),
             MintTo {
-                mint: ctx.accounts.mint_liquidity.to_account_info(),
-                to: ctx.accounts.depositor_account_liquidity.to_account_info(),
-                authority: ctx.accounts.pool_authority.to_account_info(),
+                mint: self.mint_liquidity.to_account_info(),
+                to: self.depositor_account_liquidity.to_account_info(),
+                authority: self.pool_authority.to_account_info(),
             },
-            signer_seeds,
+            signer_seeds
         ),
         liquidity,
     )?;
 
     Ok(())
 }
-
+}
 #[derive(Accounts)]
 pub struct DepositLiquidity<'info> {
     #[account(

@@ -10,15 +10,16 @@ use crate::{
     state::{Amm, Pool},
 };
 
-pub fn create_pool(ctx: Context<CreatePool>) -> Result<()> {
-    let pool = &mut ctx.accounts.pool;
-    pool.amm = ctx.accounts.amm.key();
-    pool.mint_a = ctx.accounts.mint_a.key();
-    pool.mint_b = ctx.accounts.mint_b.key();
+impl<'info> CreatePool<'info> {
+    pub fn create_pool(&mut self) -> Result<()> {
+        let pool = &mut self.pool;
+        pool.amm = self.amm.key();
+        pool.mint_a = self.mint_a.key();
+        pool.mint_b = self.mint_b.key();
 
-    Ok(())
+        Ok(())
+    }
 }
-
 #[derive(Accounts)]
 pub struct CreatePool<'info> {
     #[account(
