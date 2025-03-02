@@ -135,7 +135,7 @@ impl<'info> SwapExactTokensForTokens<'info> {
         // We tolerate if the new invariant is higher because it means a rounding error for LPs
         self.pool_account_a.reload()?;
         self.pool_account_b.reload()?;
-        if invariant > self.pool_account_a.amount * self.pool_account_a.amount {
+        if invariant > self.pool_account_a.amount * self.pool_account_b.amount {
             return err!(TutorialError::InvariantViolated);
         }
 
